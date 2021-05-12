@@ -5,6 +5,13 @@ def safeExtGet(prop, fallback) {
 }
 
 buildscript {
+    // kotlin version is dictated by rootProject extension or property in gradle.properties
+    ext.peripheral_kotlin_version = rootProject.ext.has('kotlinVersion')
+            ? rootProject.ext['kotlinVersion']
+            : rootProject.hasProperty('AsyncStorage_kotlinVersion')
+            ? rootProject.properties['AsyncStorage_kotlinVersion']
+            : '1.5.0'
+
     // The Android Gradle plugin is only required when opening the android folder stand-alone.
     // This avoids unnecessary downloads and potential conflicts when the library is included as a
     // module dependency in an application project.
@@ -15,11 +22,13 @@ buildscript {
         }
         dependencies {
             classpath 'com.android.tools.build:gradle:3.4.1'
+            classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$peripheral_kotlin_version"
         }
     }
 }
 
 apply plugin: 'com.android.library'
+apply plugin: 'kotlin-android'
 apply plugin: 'maven'
 
 // Matches values in recent template from React Native 0.59 / 0.60
@@ -63,6 +72,8 @@ dependencies {
     // https://github.com/facebook/react-native/blob/0.61-stable/template/android/app/build.gradle#L192
     //noinspection GradleDynamicVersion
     implementation 'com.facebook.react:react-native:+'  // From node_modules
+    implementation "androidx.core:core-ktx:+"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
 }
 
 def configureReactNativePom(def pom) {
@@ -116,8 +127,8 @@ afterEvaluate { project ->
 
     android.libraryVariants.all { variant ->
         def name = variant.name.capitalize()
-        task "jar${name}"(type: Jar, dependsOn: variant.javaCompile) {
-            from variant.javaCompile.destinationDir
+        task "jar${name}"(type: Jar, dependsOn: variant.javaCompileProvider.get()) {
+            from variant.javaCompileProvider.get().destinationDir
         }
     }
 
